@@ -13,19 +13,17 @@ class DashboardView(APIView):
         user = request.user
         available_erps = []
 
-        # Check which ERPs the user is registered for
-        if EducationUser.objects.filter(user=user).exists():
+        if isinstance(user, EducationUser):
             available_erps.append({
                 'id': 'education',
                 'name': 'Education ERP',
                 'url': '/dashboard/education'
             })
-        if BusinessUser.objects.filter(user=user).exists():
+        elif isinstance(user, BusinessUser):
             available_erps.append({
                 'id': 'small-business',
                 'name': 'Small Business ERP',
                 'url': '/dashboard/small-business'
             })
-        # Add other 8 ERPs later
 
         return Response({'available_erps': available_erps})

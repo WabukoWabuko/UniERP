@@ -2,11 +2,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
-from rest_framework import status
 from education_erp.models import EducationUser
 from small_business_erp.models import BusinessUser
+from rest_framework import status
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -14,26 +12,33 @@ class LoginView(APIView):
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
-        erp_id = request.data.get('erp_id')  # Frontend sends this
+        erp_id = request.data.get('erp_id')
 
         if not all([email, password, erp_id]):
             return Response({'error': 'All fields (email, password, erp_id) are required'}, status=400)
 
-        user = authenticate(request, username=email, password=password)
-        if user is None:
-            return Response({'error': 'Invalid email or password'}, status=401)
-
-        # Check ERP-specific user existence
+        user = None
         if erp_id == 'education':
-            if not EducationUser.objects.filter(user=user).exists():
-                return Response({'error': 'User not registered for Education ERP'}, status=403)
+            try:
+                user = EducationUser.objects.get(email=email)
+                if not user.check_password(password):
+                    user = None
+            except EducationUser.DoesNotExist:
+                user = None
         elif erp_id == 'small-business':
-            if not BusinessUser.objects.filter(user=user).exists():
-                return Response({'error': 'User not registered for Small Business ERP'}, status=403)
+            try:
+                user = BusinessUser.objects.get(email=email)
+                if not user.check_password(password):
+                    user = None
+            except BusinessUser.DoesNotExist:
+                user = None
         else:
             return Response({'error': 'Invalid ERP ID'}, status=400)
 
-        refresh = RefreshToken.for_user(user)
+        if user is None:
+            return Response({'error': f'Invalid credentials for {erp_id} ERP'}, status=401)
+
+        refresh = RefreshToken.for_user(user)  # JWT still works with custom user
         return Response({
             'refresh': str(refresh),
             'access': str(refresh.access_token),
@@ -53,16 +58,20 @@ class RegisterView(APIView):
             return Response({'error': 'All fields (email, password, confirm_password, erp_id) are required'}, status=400)
         if password != confirm_password:
             return Response({'error': 'Passwords do not match'}, status=400)
-        if User.objects.filter(email=email).exists():
-            return Response({'error': 'Email already registered'}, status=400)
 
-        user = User.objects.create_user(username=email, email=email, password=password)
         if erp_id == 'education':
-            EducationUser.objects.create(user=user)
+            if EducationUser.objects.filter(email=email).exists():
+                return Response({'error': 'Email already registered in Education ERP'}, status=400)
+            user = EducationUser(email=email)
+            user.set_password(password)
+            user.save()
         elif erp_id == 'small-business':
-            BusinessUser.objects.create(user=user)
+            if BusinessUser.objects.filter(email=email).exists():
+                return Response({'error': 'Email already registered in Small Business ERP'}, status=400)
+            user = BusinessUser(email=email)
+            user.set_password(password)
+            user.save()
         else:
-            user.delete()
             return Response({'error': 'Invalid ERP ID'}, status=400)
 
         refresh = RefreshToken.for_user(user)

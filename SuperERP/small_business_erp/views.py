@@ -9,6 +9,6 @@ class SmallBusinessDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not BusinessUser.objects.filter(user=request.user).exists():
+        if not isinstance(request.user, BusinessUser):
             return Response({'error': 'Not authorized for Small Business ERP'}, status=403)
         return Response({'message': 'Welcome to Small Business ERP Dashboard!'})
