@@ -44,9 +44,11 @@ INSTALLED_APPS = [
     'authentication',
     'dashboard',
     'shared_utils',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -137,9 +139,16 @@ REST_FRAMEWORK = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For testing
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+#ACCOUNT_EMAIL_REQUIRED = True
+#ACCOUNT_AUTHENTICATION_METHOD = 'email'
 
 MIDDLEWARE += [
     'allauth.account.middleware.AccountMiddleware',
 ]
+
+# Updated allauth settings
+ACCOUNT_LOGIN_METHODS = {'email'}  # Replaces ACCOUNT_AUTHENTICATION_METHOD
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']  # Replaces ACCOUNT_EMAIL_REQUIRED
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # For dev, skips email verification
+
+CORS_ALLOW_ALL_ORIGINS = True
