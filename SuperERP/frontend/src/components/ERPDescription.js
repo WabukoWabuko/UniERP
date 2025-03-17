@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom'; // Added useNavigate
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './ERPDescription.css';
@@ -19,6 +19,7 @@ const erpDetails = {
 
 const ERPDescription = () => {
   const { erpId } = useParams();
+  const navigate = useNavigate(); // For redirection
   const erp = erpDetails[erpId] || { name: 'Unknown ERP', desc: 'Details not found.', tagline: 'Explore More' };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,11 +31,15 @@ const ERPDescription = () => {
     e.preventDefault();
     try {
       const response = await axios.post('http://127.0.0.1:8000/api/login/', { email, password });
-      console.log('Login Response:', response.data); // Debug log
+      console.log('Login Response:', response.data);
       localStorage.setItem('token', response.data.access);
-      alert(`Logged into ${erp.name} successfully!`);
+      if (erpId === 'education') {
+        navigate('/dashboard/education');
+      } else {
+        alert('Dashboard not implemented yet for this ERP');
+      }
     } catch (err) {
-      console.error('Login Error:', err.response?.data || err.message); // Debug log
+      console.error('Login Error:', err.response?.data || err.message);
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     }
   };
@@ -47,11 +52,15 @@ const ERPDescription = () => {
         password,
         confirm_password: confirmPassword,
       });
-      console.log('Register Response:', response.data); // Debug log
+      console.log('Register Response:', response.data);
       localStorage.setItem('token', response.data.access);
-      alert(`Registered and logged into ${erp.name} successfully!`);
+      if (erpId === 'education') {
+        navigate('/dashboard/education');
+      } else {
+        alert('Dashboard not implemented yet for this ERP');
+      }
     } catch (err) {
-      console.error('Register Error:', err.response?.data || err.message); // Debug log
+      console.error('Register Error:', err.response?.data || err.message);
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }
   };
