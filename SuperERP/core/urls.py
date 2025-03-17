@@ -8,6 +8,8 @@ urlpatterns = [
     path('api/login/', LoginView.as_view(), name='login'),
     path('api/register/', RegisterView.as_view(), name='register'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/dashboard/', include('dashboard.urls')),
+    path('api/utils/', include('shared_utils.urls')),
     path('api/education/', include('education_erp.urls')),
     path('api/small-business/', include('small_business_erp.urls')),
 ]

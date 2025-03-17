@@ -33,10 +33,10 @@ const ERPDescription = () => {
       const response = await axios.post('http://127.0.0.1:8000/api/login/', {
         email,
         password,
-        erp_id: erpId,  // Pass ERP ID with login
+        erp_id: erpId,
       });
       localStorage.setItem('token', response.data.access);
-      navigate(`/dashboard/${erpId}`);
+      navigate('/dashboard');  // Redirect to hub
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     }
@@ -52,7 +52,7 @@ const ERPDescription = () => {
         erp_id: erpId,
       });
       localStorage.setItem('token', response.data.access);
-      navigate(`/dashboard/${erpId}`);
+      navigate('/dashboard');  // Redirect to hub
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }
