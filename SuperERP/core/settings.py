@@ -139,3 +139,7 @@ REST_FRAMEWORK = {
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For testing
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
+
+MIDDLEWARE += [
+    'allauth.account.middleware.AccountMiddleware',
+]
