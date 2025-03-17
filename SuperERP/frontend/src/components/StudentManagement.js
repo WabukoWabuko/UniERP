@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './Navbar';
@@ -13,13 +13,7 @@ const StudentManagement = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchStudents();
-    fetchAttendance();
-    fetchGrades();
-  }, []);
-
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/education/students/', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -32,9 +26,9 @@ const StudentManagement = () => {
         navigate('/');
       }
     }
-  };
+  }, [navigate]);
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = useCallback(async () => {
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/education/attendance/', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -43,9 +37,9 @@ const StudentManagement = () => {
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load attendance');
     }
-  };
+  }, []);
 
-  const fetchGrades = async () => {
+  const fetchGrades = useCallback(async () => {
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/education/grades/', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -54,7 +48,13 @@ const StudentManagement = () => {
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load grades');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchStudents();
+    fetchAttendance();
+    fetchGrades();
+  }, [fetchStudents, fetchAttendance, fetchGrades]);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

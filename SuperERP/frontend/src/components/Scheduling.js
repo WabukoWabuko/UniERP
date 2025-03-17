@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './Navbar';
@@ -13,12 +13,7 @@ const Scheduling = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchTimetable();
-    fetchFees();
-  }, []);
-
-  const fetchTimetable = async () => {
+  const fetchTimetable = useCallback(async () => {
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/education/timetable/', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -31,9 +26,9 @@ const Scheduling = () => {
         navigate('/');
       }
     }
-  };
+  }, [navigate]);
 
-  const fetchFees = async () => {
+  const fetchFees = useCallback(async () => {
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/education/fees/', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -49,7 +44,12 @@ const Scheduling = () => {
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load fees');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchTimetable();
+    fetchFees();
+  }, [fetchTimetable, fetchFees]);
 
   const handleTimetableChange = (e) => {
     setTimetableForm({ ...timetableForm, [e.target.name]: e.target.value });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './Navbar';
@@ -11,12 +11,7 @@ const StaffManagement = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchStaff();
-    fetchPayroll();
-  }, []);
-
-  const fetchStaff = async () => {
+  const fetchStaff = useCallback(async () => {
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/education/staff/', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -29,9 +24,9 @@ const StaffManagement = () => {
         navigate('/');
       }
     }
-  };
+  }, [navigate]);
 
-  const fetchPayroll = async () => {
+  const fetchPayroll = useCallback(async () => {
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/education/payroll/', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -46,7 +41,12 @@ const StaffManagement = () => {
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load payroll');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchStaff();
+    fetchPayroll();
+  }, [fetchStaff, fetchPayroll]);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
