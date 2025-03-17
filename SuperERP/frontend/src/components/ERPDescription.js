@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './ERPDescription.css'; // New custom CSS file
+import './ERPDescription.css';
 
 const erpDetails = {
   education: { name: 'Education ERP', desc: 'Manage students, staff, and schedules with ease. Perfect for schools and educational institutions.', tagline: 'Empower Education' },
@@ -22,23 +22,45 @@ const ERPDescription = () => {
   const erp = erpDetails[erpId] || { name: 'Unknown ERP', desc: 'Details not found.', tagline: 'Explore More' };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false); // Toggle login/register
+  const [isRegistering, setIsRegistering] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.post('http://127.0.0.1:8000/api/login/', { email, password });
+      console.log('Login Response:', response.data); // Debug log
       localStorage.setItem('token', response.data.access);
       alert(`Logged into ${erp.name} successfully!`);
     } catch (err) {
-      setError('Login failed. Check your credentials.');
+      console.error('Login Error:', err.response?.data || err.message); // Debug log
+      setError(err.response?.data?.error || 'Login failed. Please try again.');
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post('http://127.0.0.1:8000/api/register/', {
+        email,
+        password,
+        confirm_password: confirmPassword,
+      });
+      console.log('Register Response:', response.data); // Debug log
+      localStorage.setItem('token', response.data.access);
+      alert(`Registered and logged into ${erp.name} successfully!`);
+    } catch (err) {
+      console.error('Register Error:', err.response?.data || err.message); // Debug log
+      setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }
   };
 
   const handleToggle = () => {
     setIsRegistering(!isRegistering);
-    setError(''); // Clear error on toggle
+    setError('');
+    setPassword('');
+    setConfirmPassword('');
   };
 
   return (
@@ -63,7 +85,7 @@ const ERPDescription = () => {
           <div className="auth-card p-4 rounded shadow">
             <h3 className="text-center mb-4">{isRegistering ? 'Join Now' : 'Welcome Back'}</h3>
             {error && <p className="text-danger text-center">{error}</p>}
-            <form onSubmit={isRegistering ? null : handleLogin}>
+            <form onSubmit={isRegistering ? handleRegister : handleLogin}>
               <div className="mb-3">
                 <input
                   type="email"
@@ -71,6 +93,7 @@ const ERPDescription = () => {
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
                 />
               </div>
               <div className="mb-4">
@@ -80,6 +103,7 @@ const ERPDescription = () => {
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
               </div>
               {isRegistering && (
@@ -88,13 +112,13 @@ const ERPDescription = () => {
                     type="password"
                     className="form-control form-control-lg"
                     placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
                   />
                 </div>
               )}
-              <button
-                type={isRegistering ? 'button' : 'submit'}
-                className="btn btn-primary btn-lg w-100 mb-3"
-              >
+              <button type="submit" className="btn btn-primary btn-lg w-100 mb-3">
                 {isRegistering ? 'Register' : 'Login'}
               </button>
               <p className="text-center mb-0">
