@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './Navbar';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const EducationDashboard = () => {
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -15,10 +17,12 @@ const EducationDashboard = () => {
         setMessage(response.data.message);
       } catch (err) {
         setMessage(err.response?.data?.error || 'Error loading dashboard');
+        localStorage.removeItem('token');
+        navigate('/');
       }
     };
     fetchDashboard();
-  }, []);
+  }, [navigate]);
 
   return (
     <>
@@ -34,6 +38,12 @@ const EducationDashboard = () => {
                   <div className="card bg-light p-3">
                     <h5>Students</h5>
                     <p>Track student records, grades, and attendance.</p>
+                    <button
+                      className="btn btn-primary mt-2"
+                      onClick={() => navigate('/dashboard/education/students')}
+                    >
+                      Manage Students
+                    </button>
                   </div>
                 </div>
                 <div className="col-md-4">
