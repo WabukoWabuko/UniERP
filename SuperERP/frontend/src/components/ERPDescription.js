@@ -30,7 +30,11 @@ const ERPDescription = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/login/', { email, password });
+      const response = await axios.post('http://127.0.0.1:8000/api/login/', {
+        email,
+        password,
+        erp_id: erpId,  // Pass ERP ID with login
+      });
       localStorage.setItem('token', response.data.access);
       navigate(`/dashboard/${erpId}`);
     } catch (err) {
@@ -45,7 +49,7 @@ const ERPDescription = () => {
         email,
         password,
         confirm_password: confirmPassword,
-        erp_id: erpId,  // Send ERP ID to backend
+        erp_id: erpId,
       });
       localStorage.setItem('token', response.data.access);
       navigate(`/dashboard/${erpId}`);

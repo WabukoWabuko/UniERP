@@ -14,14 +14,31 @@ class LoginView(APIView):
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
+        erp_id = request.data.get('erp_id')  # Frontend sends this
+
+        if not all([email, password, erp_id]):
+            return Response({'error': 'All fields (email, password, erp_id) are required'}, status=400)
+
         user = authenticate(request, username=email, password=password)
-        if user is not None:
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            })
-        return Response({'error': 'Invalid email or password'}, status=401)
+        if user is None:
+            return Response({'error': 'Invalid email or password'}, status=401)
+
+        # Check ERP-specific user existence
+        if erp_id == 'education':
+            if not EducationUser.objects.filter(user=user).exists():
+                return Response({'error': 'User not registered for Education ERP'}, status=403)
+        elif erp_id == 'small-business':
+            if not BusinessUser.objects.filter(user=user).exists():
+                return Response({'error': 'User not registered for Small Business ERP'}, status=403)
+        else:
+            return Response({'error': 'Invalid ERP ID'}, status=400)
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'erp_id': erp_id,
+        })
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -45,7 +62,7 @@ class RegisterView(APIView):
         elif erp_id == 'small-business':
             BusinessUser.objects.create(user=user)
         else:
-            user.delete()  # Roll back if ERP not supported
+            user.delete()
             return Response({'error': 'Invalid ERP ID'}, status=400)
 
         refresh = RefreshToken.for_user(user)
