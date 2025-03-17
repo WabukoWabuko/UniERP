@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'dashboard',
     'shared_utils',
     'corsheaders',
+    'education_erp',
+    'small_business_erp',
 ]
 
 MIDDLEWARE = [
@@ -86,7 +88,15 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    },
+    'education_erp': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'education_db.sqlite3',
+    },
+    'small_business_erp': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'small_business_db.sqlite3',
+    },
 }
 
 
@@ -152,3 +162,5 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']  # R
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # For dev, skips email verification
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+DATABASE_ROUTERS = ['core.database_router.DatabaseRouter']

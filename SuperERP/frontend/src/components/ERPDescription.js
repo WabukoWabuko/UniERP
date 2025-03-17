@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // Added useNavigate
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './ERPDescription.css';
@@ -19,7 +19,7 @@ const erpDetails = {
 
 const ERPDescription = () => {
   const { erpId } = useParams();
-  const navigate = useNavigate(); // For redirection
+  const navigate = useNavigate();
   const erp = erpDetails[erpId] || { name: 'Unknown ERP', desc: 'Details not found.', tagline: 'Explore More' };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,15 +31,9 @@ const ERPDescription = () => {
     e.preventDefault();
     try {
       const response = await axios.post('http://127.0.0.1:8000/api/login/', { email, password });
-      console.log('Login Response:', response.data);
       localStorage.setItem('token', response.data.access);
-      if (erpId === 'education') {
-        navigate('/dashboard/education');
-      } else {
-        alert('Dashboard not implemented yet for this ERP');
-      }
+      navigate(`/dashboard/${erpId}`);
     } catch (err) {
-      console.error('Login Error:', err.response?.data || err.message);
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     }
   };
@@ -51,16 +45,11 @@ const ERPDescription = () => {
         email,
         password,
         confirm_password: confirmPassword,
+        erp_id: erpId,  // Send ERP ID to backend
       });
-      console.log('Register Response:', response.data);
       localStorage.setItem('token', response.data.access);
-      if (erpId === 'education') {
-        navigate('/dashboard/education');
-      } else {
-        alert('Dashboard not implemented yet for this ERP');
-      }
+      navigate(`/dashboard/${erpId}`);
     } catch (err) {
-      console.error('Register Error:', err.response?.data || err.message);
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }
   };
@@ -75,7 +64,6 @@ const ERPDescription = () => {
   return (
     <div className="container-fluid erp-page py-5">
       <div className="row justify-content-center">
-        {/* ERP Description */}
         <div className="col-md-7 col-lg-6">
           <div className="erp-content p-4 rounded shadow-sm bg-white">
             <h1 className="display-4 fw-bold text-primary">{erp.name}</h1>
@@ -88,8 +76,6 @@ const ERPDescription = () => {
             </ul>
           </div>
         </div>
-
-        {/* Login/Register Section */}
         <div className="col-md-5 col-lg-4">
           <div className="auth-card p-4 rounded shadow">
             <h3 className="text-center mb-4">{isRegistering ? 'Join Now' : 'Welcome Back'}</h3>

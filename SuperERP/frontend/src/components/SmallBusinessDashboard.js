@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const EducationDashboard = () => {
+const SmallBusinessDashboard = () => {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/education/dashboard/', {
+        const response = await axios.get('http://127.0.0.1:8000/api/small-business/dashboard/', {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
         setMessage(response.data.message);
@@ -24,25 +24,25 @@ const EducationDashboard = () => {
       <div className="row justify-content-center">
         <div className="col-md-10">
           <div className="card shadow p-4">
-            <h1 className="display-4 text-primary mb-4">Education ERP Dashboard</h1>
+            <h1 className="display-4 text-primary mb-4">Small Business ERP Dashboard</h1>
             <p className="lead">{message}</p>
             <div className="row mt-5">
               <div className="col-md-4">
                 <div className="card bg-light p-3">
-                  <h5>Students</h5>
-                  <p>Track student records, grades, and attendance.</p>
+                  <h5>Inventory</h5>
+                  <p>Track stock levels and updates.</p>
                 </div>
               </div>
               <div className="col-md-4">
                 <div className="card bg-light p-3">
-                  <h5>Staff</h5>
-                  <p>Manage teachers, payroll, and schedules.</p>
+                  <h5>Accounting</h5>
+                  <p>Manage finances and reports.</p>
                 </div>
               </div>
               <div className="col-md-4">
                 <div className="card bg-light p-3">
-                  <h5>Scheduling</h5>
-                  <p>Create timetables and track fees.</p>
+                  <h5>Customers</h5>
+                  <p>Handle client info and orders.</p>
                 </div>
               </div>
             </div>
@@ -62,4 +62,4 @@ const EducationDashboard = () => {
   );
 };
 
-export default EducationDashboard;
+export default SmallBusinessDashboard;
