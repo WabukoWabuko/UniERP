@@ -1,16 +1,16 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from authentication.utils import ERPAuthentication
 from education_erp.models import EducationUser
 from small_business_erp.models import BusinessUser
 
 class DashboardView(APIView):
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [ERPAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
+        user = request.user.user  # Unwrap the ERP user
         available_erps = []
 
         if isinstance(user, EducationUser):

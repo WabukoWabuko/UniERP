@@ -1,10 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import status
 from education_erp.models import EducationUser
 from small_business_erp.models import BusinessUser
-from rest_framework import status
+from .utils import ERPUserWrapper
+from .serializers import ERPAuthTokenSerializer
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -38,10 +39,11 @@ class LoginView(APIView):
         if user is None:
             return Response({'error': f'Invalid credentials for {erp_id} ERP'}, status=401)
 
-        refresh = RefreshToken.for_user(user)  # JWT still works with custom user
+        wrapped_user = ERPUserWrapper(user, erp_id)
+        token = ERPAuthTokenSerializer.get_token(wrapped_user)  # Pass wrapped user with erp_id
         return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            'refresh': str(token),
+            'access': str(token.access_token),
             'erp_id': erp_id,
         })
 
@@ -74,10 +76,11 @@ class RegisterView(APIView):
         else:
             return Response({'error': 'Invalid ERP ID'}, status=400)
 
-        refresh = RefreshToken.for_user(user)
+        wrapped_user = ERPUserWrapper(user, erp_id)
+        token = ERPAuthTokenSerializer.get_token(wrapped_user)  # Pass wrapped user with erp_id
         return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            'refresh': str(token),
+            'access': str(token.access_token),
             'message': 'Registration successful',
             'erp_id': erp_id,
         }, status=201)

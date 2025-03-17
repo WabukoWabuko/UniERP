@@ -27,8 +27,12 @@ class DatabaseRouter:
         return 'default'
 
     def allow_relation(self, obj1, obj2, **hints):
-        # Only allow relations within the same app
-        return obj1._meta.app_label == obj2._meta.app_label
+        app1, app2 = obj1._meta.app_label, obj2._meta.app_label
+        # Allow relations between contenttypes and ERP apps
+        if 'django.contrib.contenttypes' in (app1, app2) and (app1 in self.ERP_APPS or app2 in self.ERP_APPS):
+            return True
+        # Only allow relations within the same app otherwise
+        return app1 == app2
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         if app_label in self.ERP_APPS:
