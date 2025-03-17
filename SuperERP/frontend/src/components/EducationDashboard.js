@@ -50,6 +50,12 @@ const EducationDashboard = () => {
                   <div className="card bg-light p-3">
                     <h5>Staff</h5>
                     <p>Manage teachers, payroll, and schedules.</p>
+                    <button
+                      className="btn btn-primary mt-2"
+                      onClick={() => navigate('/dashboard/education/staff')}
+                    >
+                      Manage Staff
+                    </button>
                   </div>
                 </div>
                 <div className="col-md-4">
