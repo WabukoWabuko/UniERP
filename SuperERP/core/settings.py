@@ -87,7 +87,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'auth_db.sqlite3',  # Auth DB
     },
     'education_erp': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -97,6 +97,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'small_business_db.sqlite3',
     },
+    # other 8 DBs later
 }
 
 
