@@ -62,6 +62,12 @@ const EducationDashboard = () => {
                   <div className="card bg-light p-3">
                     <h5>Scheduling</h5>
                     <p>Create timetables and track fees.</p>
+                    <button
+                      className="btn btn-primary mt-2"
+                      onClick={() => navigate('/dashboard/education/scheduling')}
+                    >
+                      Manage Scheduling
+                    </button>
                   </div>
                 </div>
               </div>

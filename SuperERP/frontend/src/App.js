@@ -6,6 +6,7 @@ import DashboardHub from './components/DashboardHub';
 import EducationDashboard from './components/EducationDashboard';
 import StudentManagement from './components/StudentManagement';
 import StaffManagement from './components/StaffManagement';
+import Scheduling from './components/Scheduling';
 import SmallBusinessDashboard from './components/SmallBusinessDashboard';
 
 const ProtectedRoute = ({ children }) => {
@@ -34,6 +35,10 @@ function App() {
         <Route
           path="/dashboard/education/staff"
           element={<ProtectedRoute><StaffManagement /></ProtectedRoute>}
+        />
+        <Route
+          path="/dashboard/education/scheduling"
+          element={<ProtectedRoute><Scheduling /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/small-business"

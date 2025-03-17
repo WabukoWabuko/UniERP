@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from authentication.utils import ERPAuthentication
-from .models import EducationUser, Student, Staff
+from .models import EducationUser, Student, Staff, Timetable, Fee
 from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -113,7 +113,7 @@ class StaffListView(APIView):
             'staff_id': s.staff_id,
             'role': s.role,
             'hire_date': s.hire_date,
-            'salary': float(s.salary),  # Convert Decimal to float for JSON
+            'salary': float(s.salary),
         } for s in staff]
         return Response(data)
 
@@ -197,3 +197,109 @@ class PayrollOverviewView(APIView):
             'total_salary': total_salary,
         }
         return Response(data)
+
+class TimetableListView(APIView):
+    authentication_classes = [ERPAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not isinstance(request.user.user, EducationUser):
+            return Response({'error': 'Not authorized for Education ERP'}, status=403)
+        timetable = Timetable.objects.filter(user=request.user.user)
+        data = [{
+            'id': t.id,
+            'staff_name': t.staff.name,
+            'student_name': t.student.name,
+            'subject': t.subject,
+            'day_of_week': t.day_of_week,
+            'start_time': t.start_time.strftime('%H:%M'),
+            'end_time': t.end_time.strftime('%H:%M'),
+        } for t in timetable]
+        return Response(data)
+
+    def post(self, request):
+        if not isinstance(request.user.user, EducationUser):
+            return Response({'error': 'Not authorized for Education ERP'}, status=403)
+        staff_id = request.data.get('staff_id')
+        student_id = request.data.get('student_id')
+        subject = request.data.get('subject')
+        day_of_week = request.data.get('day_of_week')
+        start_time = request.data.get('start_time')
+        end_time = request.data.get('end_time')
+        if not all([staff_id, student_id, subject, day_of_week, start_time, end_time]):
+            return Response({'error': 'All fields are required'}, status=400)
+        try:
+            staff = Staff.objects.get(id=staff_id, user=request.user.user)
+            student = Student.objects.get(id=student_id, user=request.user.user)
+        except ObjectDoesNotExist:
+            return Response({'error': 'Staff or Student not found'}, status=404)
+        timetable = Timetable(
+            user=request.user.user,
+            staff=staff,
+            student=student,
+            subject=subject,
+            day_of_week=day_of_week,
+            start_time=start_time,
+            end_time=end_time
+        )
+        timetable.save()
+        return Response({'message': 'Timetable entry added', 'id': timetable.id}, status=201)
+
+class FeeListView(APIView):
+    authentication_classes = [ERPAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not isinstance(request.user.user, EducationUser):
+            return Response({'error': 'Not authorized for Education ERP'}, status=403)
+        fees = Fee.objects.filter(user=request.user.user)
+        data = [{
+            'id': f.id,
+            'student_name': f.student.name,
+            'amount': float(f.amount),
+            'due_date': f.due_date,
+            'paid': f.paid,
+            'paid_date': f.paid_date,
+        } for f in fees]
+        total_due = sum(float(f.amount) for f in fees.filter(paid=False))
+        total_paid = sum(float(f.amount) for f in fees.filter(paid=True))
+        return Response({'fees': data, 'total_due': total_due, 'total_paid': total_paid})
+
+    def post(self, request):
+        if not isinstance(request.user.user, EducationUser):
+            return Response({'error': 'Not authorized for Education ERP'}, status=403)
+        student_id = request.data.get('student_id')
+        amount = request.data.get('amount')
+        due_date = request.data.get('due_date')
+        if not all([student_id, amount, due_date]):
+            return Response({'error': 'Student ID, amount, and due date are required'}, status=400)
+        try:
+            student = Student.objects.get(id=student_id, user=request.user.user)
+        except ObjectDoesNotExist:
+            return Response({'error': 'Student not found'}, status=404)
+        fee = Fee(
+            user=request.user.user,
+            student=student,
+            amount=amount,
+            due_date=due_date
+        )
+        fee.save()
+        return Response({'message': 'Fee added successfully', 'id': fee.id}, status=201)
+
+class FeeDetailView(APIView):
+    authentication_classes = [ERPAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, fee_id):
+        if not isinstance(request.user.user, EducationUser):
+            return Response({'error': 'Not authorized for Education ERP'}, status=403)
+        try:
+            fee = Fee.objects.get(id=fee_id, user=request.user.user)
+            paid = request.data.get('paid', fee.paid)
+            if paid and not fee.paid:
+                fee.paid = True
+                fee.paid_date = request.data.get('paid_date', timezone.now().date())
+            fee.save()
+            return Response({'message': 'Fee updated successfully'})
+        except ObjectDoesNotExist:
+            return Response({'error': 'Fee not found'}, status=404)

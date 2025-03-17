@@ -24,7 +24,24 @@ class Student(models.Model):
 class Staff(models.Model):
     user = models.ForeignKey(EducationUser, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
-    staff_id = models.CharField(max_length=20, unique=True)  # e.g., "STF001"
-    role = models.CharField(max_length=50)  # e.g., "Teacher", "Admin"
+    staff_id = models.CharField(max_length=20, unique=True)
+    role = models.CharField(max_length=50)
     hire_date = models.DateField(auto_now_add=True)
-    salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Monthly salary
+    salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+class Timetable(models.Model):
+    user = models.ForeignKey(EducationUser, on_delete=models.CASCADE)
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    subject = models.CharField(max_length=100)
+    day_of_week = models.CharField(max_length=10)  # e.g., "Monday"
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+class Fee(models.Model):
+    user = models.ForeignKey(EducationUser, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    due_date = models.DateField()
+    paid = models.BooleanField(default=False)
+    paid_date = models.DateField(null=True, blank=True)
