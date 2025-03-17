@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework import status
 from education_erp.models import EducationUser
@@ -16,7 +16,6 @@ class LoginView(APIView):
         password = request.data.get('password')
         user = authenticate(request, username=email, password=password)
         if user is not None:
-            login(request, user)
             refresh = RefreshToken.for_user(user)
             return Response({
                 'refresh': str(refresh),
@@ -30,11 +29,11 @@ class RegisterView(APIView):
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
-        confirm_password = request.data.get('password')
-        erp_id = request.data.get('erp_id')  # Frontend sends this
+        confirm_password = request.data.get('confirm_password')
+        erp_id = request.data.get('erp_id')
 
-        if not email or not password or not erp_id:
-            return Response({'error': 'All fields are required'}, status=400)
+        if not all([email, password, confirm_password, erp_id]):
+            return Response({'error': 'All fields (email, password, confirm_password, erp_id) are required'}, status=400)
         if password != confirm_password:
             return Response({'error': 'Passwords do not match'}, status=400)
         if User.objects.filter(email=email).exists():
@@ -45,10 +44,11 @@ class RegisterView(APIView):
             EducationUser.objects.create(user=user)
         elif erp_id == 'small-business':
             BusinessUser.objects.create(user=user)
-        # Add other ERPs later
+        else:
+            user.delete()  # Roll back if ERP not supported
+            return Response({'error': 'Invalid ERP ID'}, status=400)
 
         refresh = RefreshToken.for_user(user)
-        login(request, user)
         return Response({
             'refresh': str(refresh),
             'access': str(refresh.access_token),
