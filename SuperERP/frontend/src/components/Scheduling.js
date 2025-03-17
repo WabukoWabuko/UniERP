@@ -8,9 +8,7 @@ const Scheduling = () => {
   const [timetable, setTimetable] = useState([]);
   const [fees, setFees] = useState([]);
   const [totals, setTotals] = useState({ total_due: 0, total_paid: 0 });
-  const [timetableForm, setTimetableForm] = useState({
-    staff_id: '', student_id: '', subject: '', day_of_week: '', start_time: '', end_time: ''
-  });
+  const [timetableForm, setTimetableForm] = useState({ staff_id: '', student_id: '', subject: '', day_of_week: '', start_time: '', end_time: '' });
   const [feeForm, setFeeForm] = useState({ student_id: '', amount: '', due_date: '' });
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -42,6 +40,12 @@ const Scheduling = () => {
       });
       setFees(response.data.fees);
       setTotals({ total_due: response.data.total_due, total_paid: response.data.total_paid });
+      const blob = new Blob([new Uint8Array.from(Buffer.from(response.data.report_pdf, 'hex'))], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'fee_report.pdf';
+      link.click();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load fees');
     }
@@ -78,6 +82,7 @@ const Scheduling = () => {
       setFees([...fees, { id: response.data.id, ...feeForm, amount: parseFloat(feeForm.amount), paid: false }]);
       setTotals({ ...totals, total_due: totals.total_due + parseFloat(feeForm.amount) });
       setFeeForm({ student_id: '', amount: '', due_date: '' });
+      fetchFees(); // Refresh PDF
       setError('');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add fee');
@@ -96,6 +101,7 @@ const Scheduling = () => {
         total_due: totals.total_due - fee.amount,
         total_paid: totals.total_paid + fee.amount,
       });
+      fetchFees(); // Refresh PDF
       setError('');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to update fee');
@@ -114,178 +120,46 @@ const Scheduling = () => {
               <h3 className="mt-4">Timetable</h3>
               <form onSubmit={handleAddTimetable} className="mb-4">
                 <div className="row">
-                  <div className="col-md-2">
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="staff_id"
-                      placeholder="Staff ID"
-                      value={timetableForm.staff_id}
-                      onChange={handleTimetableChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-2">
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="student_id"
-                      placeholder="Student ID"
-                      value={timetableForm.student_id}
-                      onChange={handleTimetableChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-2">
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="subject"
-                      placeholder="Subject"
-                      value={timetableForm.subject}
-                      onChange={handleTimetableChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-2">
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="day_of_week"
-                      placeholder="Day"
-                      value={timetableForm.day_of_week}
-                      onChange={handleTimetableChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-1">
-                    <input
-                      type="time"
-                      className="form-control"
-                      name="start_time"
-                      value={timetableForm.start_time}
-                      onChange={handleTimetableChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-1">
-                    <input
-                      type="time"
-                      className="form-control"
-                      name="end_time"
-                      value={timetableForm.end_time}
-                      onChange={handleTimetableChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-2">
-                    <button type="submit" className="btn btn-primary w-100">Add Entry</button>
-                  </div>
+                  <div className="col-md-2"><input type="text" className="form-control" name="staff_id" placeholder="Staff ID" value={timetableForm.staff_id} onChange={handleTimetableChange} required /></div>
+                  <div className="col-md-2"><input type="text" className="form-control" name="student_id" placeholder="Student ID" value={timetableForm.student_id} onChange={handleTimetableChange} required /></div>
+                  <div className="col-md-2"><input type="text" className="form-control" name="subject" placeholder="Subject" value={timetableForm.subject} onChange={handleTimetableChange} required /></div>
+                  <div className="col-md-2"><input type="text" className="form-control" name="day_of_week" placeholder="Day" value={timetableForm.day_of_week} onChange={handleTimetableChange} required /></div>
+                  <div className="col-md-1"><input type="time" className="form-control" name="start_time" value={timetableForm.start_time} onChange={handleTimetableChange} required /></div>
+                  <div className="col-md-1"><input type="time" className="form-control" name="end_time" value={timetableForm.end_time} onChange={handleTimetableChange} required /></div>
+                  <div className="col-md-2"><button type="submit" className="btn btn-primary w-100">Add Entry</button></div>
                 </div>
               </form>
               <table className="table table-striped mb-5">
-                <thead>
-                  <tr>
-                    <th>Staff</th>
-                    <th>Student</th>
-                    <th>Subject</th>
-                    <th>Day</th>
-                    <th>Start</th>
-                    <th>End</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {timetable.map(t => (
-                    <tr key={t.id}>
-                      <td>{t.staff_name}</td>
-                      <td>{t.student_name}</td>
-                      <td>{t.subject}</td>
-                      <td>{t.day_of_week}</td>
-                      <td>{t.start_time}</td>
-                      <td>{t.end_time}</td>
-                    </tr>
-                  ))}
-                </tbody>
+                <thead><tr><th>Staff</th><th>Student</th><th>Subject</th><th>Day</th><th>Start</th><th>End</th></tr></thead>
+                <tbody>{timetable.map(t => (
+                  <tr key={t.id}><td>{t.staff_name}</td><td>{t.student_name}</td><td>{t.subject}</td><td>{t.day_of_week}</td><td>{t.start_time}</td><td>{t.end_time}</td></tr>
+                ))}</tbody>
               </table>
               <h3>Fee Tracking</h3>
               <div className="card mb-4">
                 <div className="card-body">
                   <p>Total Due: ${totals.total_due.toFixed(2)}</p>
                   <p>Total Paid: ${totals.total_paid.toFixed(2)}</p>
+                  <button className="btn btn-secondary" onClick={fetchFees}>Download Fee Report PDF</button>
                 </div>
               </div>
               <form onSubmit={handleAddFee} className="mb-4">
                 <div className="row">
-                  <div className="col-md-3">
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="student_id"
-                      placeholder="Student ID"
-                      value={feeForm.student_id}
-                      onChange={handleFeeChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-3">
-                    <input
-                      type="number"
-                      className="form-control"
-                      name="amount"
-                      placeholder="Amount"
-                      value={feeForm.amount}
-                      onChange={handleFeeChange}
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  <div className="col-md-3">
-                    <input
-                      type="date"
-                      className="form-control"
-                      name="due_date"
-                      value={feeForm.due_date}
-                      onChange={handleFeeChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-3">
-                    <button type="submit" className="btn btn-primary w-100">Add Fee</button>
-                  </div>
+                  <div className="col-md-3"><input type="text" className="form-control" name="student_id" placeholder="Student ID" value={feeForm.student_id} onChange={handleFeeChange} required /></div>
+                  <div className="col-md-3"><input type="number" className="form-control" name="amount" placeholder="Amount" value={feeForm.amount} onChange={handleFeeChange} step="0.01" required /></div>
+                  <div className="col-md-3"><input type="date" className="form-control" name="due_date" value={feeForm.due_date} onChange={handleFeeChange} required /></div>
+                  <div className="col-md-3"><button type="submit" className="btn btn-primary w-100">Add Fee</button></div>
                 </div>
               </form>
               <table className="table table-striped">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Amount</th>
-                    <th>Due Date</th>
-                    <th>Paid</th>
-                    <th>Paid Date</th>
-                    <th>Action</th>
+                <thead><tr><th>Student</th><th>Amount</th><th>Due Date</th><th>Paid</th><th>Paid Date</th><th>Action</th></tr></thead>
+                <tbody>{fees.map(f => (
+                  <tr key={f.id}><td>{f.student_name}</td><td>${f.amount.toFixed(2)}</td><td>{f.due_date}</td><td>{f.paid ? 'Yes' : 'No'}</td><td>{f.paid_date || 'N/A'}</td>
+                    <td>{!f.paid && (
+                      <button className="btn btn-success btn-sm" onClick={() => handleMarkPaid(f.id)}>Mark Paid</button>
+                    )}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {fees.map(f => (
-                    <tr key={f.id}>
-                      <td>{f.student_name}</td>
-                      <td>${f.amount.toFixed(2)}</td>
-                      <td>{f.due_date}</td>
-                      <td>{f.paid ? 'Yes' : 'No'}</td>
-                      <td>{f.paid_date || 'N/A'}</td>
-                      <td>
-                        {!f.paid && (
-                          <button
-                            className="btn btn-success btn-sm"
-                            onClick={() => handleMarkPaid(f.id)}
-                          >
-                            Mark Paid
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+                ))}</tbody>
               </table>
             </div>
           </div>

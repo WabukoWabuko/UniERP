@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     EducationDashboardView, StudentListView, StudentDetailView,
     StaffListView, StaffDetailView, PayrollOverviewView,
-    TimetableListView, FeeListView, FeeDetailView
+    TimetableListView, FeeListView, FeeDetailView,
+    AttendanceView, GradeView
 )
 
 urlpatterns = [
@@ -15,4 +16,6 @@ urlpatterns = [
     path('timetable/', TimetableListView.as_view(), name='timetable_list'),
     path('fees/', FeeListView.as_view(), name='fee_list'),
     path('fees/<int:fee_id>/', FeeDetailView.as_view(), name='fee_detail'),
+    path('attendance/', AttendanceView.as_view(), name='attendance'),
+    path('grades/', GradeView.as_view(), name='grades'),
 ]

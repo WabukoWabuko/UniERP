@@ -3,9 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './Navbar';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const EducationDashboard = () => {
-  const [message, setMessage] = useState('');
+  const [data, setData] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -14,15 +18,23 @@ const EducationDashboard = () => {
         const response = await axios.get('http://127.0.0.1:8000/api/education/dashboard/', {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
-        setMessage(response.data.message);
+        setData(response.data);
       } catch (err) {
-        setMessage(err.response?.data?.error || 'Error loading dashboard');
         localStorage.removeItem('token');
         navigate('/');
       }
     };
     fetchDashboard();
   }, [navigate]);
+
+  const chartData = {
+    labels: ['Students', 'Staff', 'Fees Due', 'Attendance Today'],
+    datasets: [{
+      label: 'Overview',
+      data: [data.total_students || 0, data.total_staff || 0, data.total_fees_due || 0, data.attendance_today || 0],
+      backgroundColor: ['#007bff', '#28a745', '#dc3545', '#ffc107'],
+    }],
+  };
 
   return (
     <>
@@ -32,16 +44,22 @@ const EducationDashboard = () => {
           <div className="col-md-10">
             <div className="card shadow p-4">
               <h1 className="display-4 text-primary mb-4">Education ERP Dashboard</h1>
-              <p className="lead">{message}</p>
+              <div className="row mb-4">
+                <div className="col-md-6">
+                  <Bar data={chartData} options={{ responsive: true, scales: { y: { beginAtZero: true } } }} />
+                </div>
+                <div className="col-md-6">
+                  <p>Total Students: {data.total_students}</p>
+                  <p>Total Staff: {data.total_staff}</p>
+                  <p>Total Fees Due: ${data.total_fees_due?.toFixed(2)}</p>
+                  <p>Attendance Today: {data.attendance_today}</p>
+                </div>
+              </div>
               <div className="row mt-5">
                 <div className="col-md-4">
                   <div className="card bg-light p-3">
                     <h5>Students</h5>
-                    <p>Track student records, grades, and attendance.</p>
-                    <button
-                      className="btn btn-primary mt-2"
-                      onClick={() => navigate('/dashboard/education/students')}
-                    >
+                    <button className="btn btn-primary mt-2" onClick={() => navigate('/dashboard/education/students')}>
                       Manage Students
                     </button>
                   </div>
@@ -49,11 +67,7 @@ const EducationDashboard = () => {
                 <div className="col-md-4">
                   <div className="card bg-light p-3">
                     <h5>Staff</h5>
-                    <p>Manage teachers, payroll, and schedules.</p>
-                    <button
-                      className="btn btn-primary mt-2"
-                      onClick={() => navigate('/dashboard/education/staff')}
-                    >
+                    <button className="btn btn-primary mt-2" onClick={() => navigate('/dashboard/education/staff')}>
                       Manage Staff
                     </button>
                   </div>
@@ -61,11 +75,7 @@ const EducationDashboard = () => {
                 <div className="col-md-4">
                   <div className="card bg-light p-3">
                     <h5>Scheduling</h5>
-                    <p>Create timetables and track fees.</p>
-                    <button
-                      className="btn btn-primary mt-2"
-                      onClick={() => navigate('/dashboard/education/scheduling')}
-                    >
+                    <button className="btn btn-primary mt-2" onClick={() => navigate('/dashboard/education/scheduling')}>
                       Manage Scheduling
                     </button>
                   </div>
