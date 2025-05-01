@@ -13,14 +13,24 @@ const Scheduling = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const fetchTimetable = useCallback(async () => {
+  const fetchData = useCallback(async () => { // Combined fetch for timetable and fees
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/education/timetable/', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No token found in localStorage');
+      }
+      const response = await axios.get('http://127.0.0.1:8000/api/dashboard/education/scheduling/', {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setTimetable(response.data);
+      // Assuming response.data contains { fees: [...] } as per backend
+      setFees(response.data.fees || []);
+      // Calculate totals from fees
+      const totalDue = response.data.fees.reduce((sum, fee) => sum + (fee.paid ? 0 : parseFloat(fee.amount || 0)), 0);
+      const totalPaid = response.data.fees.reduce((sum, fee) => sum + (fee.paid ? parseFloat(fee.amount || 0) : 0), 0);
+      setTotals({ total_due: totalDue, total_paid: totalPaid });
+      setError('');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load timetable');
+      setError(err.response?.data?.error || 'Failed to load scheduling data');
       if (err.response?.status === 403) {
         localStorage.removeItem('token');
         navigate('/');
@@ -28,28 +38,9 @@ const Scheduling = () => {
     }
   }, [navigate]);
 
-  const fetchFees = useCallback(async () => {
-    try {
-      const response = await axios.get('http://127.0.0.1:8000/api/education/fees/', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      setFees(response.data.fees);
-      setTotals({ total_due: response.data.total_due, total_paid: response.data.total_paid });
-      const blob = new Blob([new Uint8Array.from(Buffer.from(response.data.report_pdf, 'hex'))], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'fee_report.pdf';
-      link.click();
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load fees');
-    }
-  }, []);
-
   useEffect(() => {
-    fetchTimetable();
-    fetchFees();
-  }, [fetchTimetable, fetchFees]);
+    fetchData();
+  }, [fetchData]);
 
   const handleTimetableChange = (e) => {
     setTimetableForm({ ...timetableForm, [e.target.name]: e.target.value });
@@ -62,7 +53,7 @@ const Scheduling = () => {
   const handleAddTimetable = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/education/timetable/', timetableForm, {
+      const response = await axios.post('http://127.0.0.1:8000/api/dashboard/education/scheduling/', timetableForm, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       setTimetable([...timetable, { id: response.data.id, ...timetableForm }]);
@@ -76,13 +67,13 @@ const Scheduling = () => {
   const handleAddFee = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/education/fees/', feeForm, {
+      const response = await axios.post('http://127.0.0.1:8000/api/dashboard/education/scheduling/', feeForm, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       setFees([...fees, { id: response.data.id, ...feeForm, amount: parseFloat(feeForm.amount), paid: false }]);
       setTotals({ ...totals, total_due: totals.total_due + parseFloat(feeForm.amount) });
       setFeeForm({ student_id: '', amount: '', due_date: '' });
-      fetchFees(); // Refresh PDF
+      fetchData(); // Refresh data
       setError('');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add fee');
@@ -91,7 +82,7 @@ const Scheduling = () => {
 
   const handleMarkPaid = async (feeId) => {
     try {
-      await axios.put(`http://127.0.0.1:8000/api/education/fees/${feeId}/`, { paid: true }, {
+      await axios.put(`http://127.0.0.1:8000/api/dashboard/education/scheduling/${feeId}/`, { paid: true }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const updatedFees = fees.map(f => f.id === feeId ? { ...f, paid: true, paid_date: new Date().toISOString().split('T')[0] } : f);
@@ -101,7 +92,7 @@ const Scheduling = () => {
         total_due: totals.total_due - fee.amount,
         total_paid: totals.total_paid + fee.amount,
       });
-      fetchFees(); // Refresh PDF
+      fetchData(); // Refresh data
       setError('');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to update fee');
@@ -132,7 +123,7 @@ const Scheduling = () => {
               <table className="table table-striped mb-5">
                 <thead><tr><th>Staff</th><th>Student</th><th>Subject</th><th>Day</th><th>Start</th><th>End</th></tr></thead>
                 <tbody>{timetable.map(t => (
-                  <tr key={t.id}><td>{t.staff_name}</td><td>{t.student_name}</td><td>{t.subject}</td><td>{t.day_of_week}</td><td>{t.start_time}</td><td>{t.end_time}</td></tr>
+                  <tr key={t.id}><td>{t.staff_id}</td><td>{t.student_id}</td><td>{t.subject}</td><td>{t.day_of_week}</td><td>{t.start_time}</td><td>{t.end_time}</td></tr>
                 ))}</tbody>
               </table>
               <h3>Fee Tracking</h3>
@@ -140,7 +131,7 @@ const Scheduling = () => {
                 <div className="card-body">
                   <p>Total Due: ${totals.total_due.toFixed(2)}</p>
                   <p>Total Paid: ${totals.total_paid.toFixed(2)}</p>
-                  <button className="btn btn-secondary" onClick={fetchFees}>Download Fee Report PDF</button>
+                  {/* Removed PDF button for now, add back if backend supports it */}
                 </div>
               </div>
               <form onSubmit={handleAddFee} className="mb-4">
@@ -154,7 +145,7 @@ const Scheduling = () => {
               <table className="table table-striped">
                 <thead><tr><th>Student</th><th>Amount</th><th>Due Date</th><th>Paid</th><th>Paid Date</th><th>Action</th></tr></thead>
                 <tbody>{fees.map(f => (
-                  <tr key={f.id}><td>{f.student_name}</td><td>${f.amount.toFixed(2)}</td><td>{f.due_date}</td><td>{f.paid ? 'Yes' : 'No'}</td><td>{f.paid_date || 'N/A'}</td>
+                  <tr key={f.id}><td>{f.student__name}</td><td>${parseFloat(f.amount).toFixed(2)}</td><td>{new Date(f.due_date).toLocaleDateString()}</td><td>{f.paid ? 'Yes' : 'No'}</td><td>{f.paid_date || 'N/A'}</td>
                     <td>{!f.paid && (
                       <button className="btn btn-success btn-sm" onClick={() => handleMarkPaid(f.id)}>Mark Paid</button>
                     )}</td>

@@ -8,6 +8,7 @@ import StudentManagement from './components/StudentManagement';
 import StaffManagement from './components/StaffManagement';
 import Scheduling from './components/Scheduling';
 import SmallBusinessDashboard from './components/SmallBusinessDashboard';
+import LmsDashboard from './components/LmsDashboard'; // Added LMS component
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -39,6 +40,10 @@ function App() {
         <Route
           path="/dashboard/education/scheduling"
           element={<ProtectedRoute><Scheduling /></ProtectedRoute>}
+        />
+        <Route
+          path="/dashboard/education/lms" // Added LMS route
+          element={<ProtectedRoute><LmsDashboard /></ProtectedRoute>}
         />
         <Route
           path="/dashboard/small-business"

@@ -1,47 +1,26 @@
-from django.contrib.auth.models import AnonymousUser
-from rest_framework_simplejwt.authentication import JWTAuthentication as BaseJWTAuthentication
-from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.exceptions import AuthenticationFailed
+from django.conf import settings
 from education_erp.models import EducationUser
-from small_business_erp.models import BusinessUser
 
-class ERPUserWrapper:
-    def __init__(self, user, erp_id):
-        self.user = user
-        self._erp_id = erp_id
-        self.is_authenticated = True
-        self.is_anonymous = False
-
-    @property
-    def id(self):
-        return self.user.id
-
-    @property
-    def email(self):
-        return self.user.email
-
-    def __getattr__(self, name):
-        return getattr(self.user, name)
-
-def get_erp_user(user_id, erp_id):  # Changed to use ID from token
-    if erp_id == 'education':
+class ERPAuthentication(TokenAuthentication):
+    def authenticate(self, request):
+        token = self.get_authorization_header(request).decode('utf-8').split()[1]
         try:
-            return ERPUserWrapper(EducationUser.objects.get(id=user_id), erp_id)
-        except EducationUser.DoesNotExist:
-            return AnonymousUser()
-    elif erp_id == 'small-business':
-        try:
-            return ERPUserWrapper(BusinessUser.objects.get(id=user_id), erp_id)
-        except BusinessUser.DoesNotExist:
-            return AnonymousUser()
-    return AnonymousUser()
+            payload = self.get_validated_token(token)
+            user_id = payload['user_id']
+            erp_id = payload['erp_id']
+            user = EducationUser.objects.get(id=user_id)
 
-class ERPAuthentication(BaseJWTAuthentication):
-    def get_user(self, validated_token):
-        try:
-            user_id = validated_token['user_id']
-            erp_id = validated_token.get('erp_id')
-            if not erp_id:
-                raise InvalidToken('Token missing erp_id')
-            return get_erp_user(user_id, erp_id)
-        except KeyError:
-            raise InvalidToken('Token contained no recognizable user identification')
+            if erp_id != 'education' or not isinstance(user, EducationUser):
+                raise AuthenticationFailed('Invalid ERP user')
+
+            # Check permissions
+            required_permission = request.query_params.get('permission', None)
+            if required_permission and not user.permissions.get(required_permission, False):
+                raise AuthenticationFailed(f'Permission "{required_permission}" required')
+
+            request.auth = payload
+            return (user, token)
+        except Exception as e:
+            raise AuthenticationFailed(str(e))

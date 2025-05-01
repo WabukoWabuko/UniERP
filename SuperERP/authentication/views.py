@@ -1,86 +1,66 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from rest_framework import status
-from education_erp.models import EducationUser
-from small_business_erp.models import BusinessUser
-from .utils import ERPUserWrapper
-from .serializers import ERPAuthTokenSerializer
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from .serializers import UserSerializer
+from .utils import ERPAuthentication
+import logging
+
+logger = logging.getLogger(__name__)
 
 class LoginView(APIView):
-    permission_classes = [AllowAny]
-
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
-        erp_id = request.data.get('erp_id')
+        erp_id = request.data.get('erp_id', 'education')  # Default to education
 
-        if not all([email, password, erp_id]):
-            return Response({'error': 'All fields (email, password, erp_id) are required'}, status=400)
-
-        user = None
-        if erp_id == 'education':
-            try:
-                user = EducationUser.objects.get(email=email)
-                if not user.check_password(password):
-                    user = None
-            except EducationUser.DoesNotExist:
-                user = None
-        elif erp_id == 'small-business':
-            try:
-                user = BusinessUser.objects.get(email=email)
-                if not user.check_password(password):
-                    user = None
-            except BusinessUser.DoesNotExist:
-                user = None
-        else:
-            return Response({'error': 'Invalid ERP ID'}, status=400)
-
-        if user is None:
-            return Response({'error': f'Invalid credentials for {erp_id} ERP'}, status=401)
-
-        wrapped_user = ERPUserWrapper(user, erp_id)
-        token = ERPAuthTokenSerializer.get_token(wrapped_user)  # Pass wrapped user with erp_id
-        return Response({
-            'refresh': str(token),
-            'access': str(token.access_token),
-            'erp_id': erp_id,
-        })
+        user = authenticate(request, username=email, password=password)
+        if user and isinstance(user, ERPAuthentication):
+            refresh = RefreshToken.for_user(user)
+            logger.info(f"User {email} logged in with ERP ID: {erp_id}")
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': UserSerializer(user).data,
+                'erp_id': erp_id
+            })
+        logger.error(f"Login failed for {email}")
+        return Response({'error': 'Invalid credentials'}, status=401)
 
 class RegisterView(APIView):
-    permission_classes = [AllowAny]
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            logger.info(f"User {user.email} registered")
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': serializer.data
+            })
+        logger.error(f"Registration failed: {serializer.errors}")
+        return Response(serializer.errors, status=400)
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
-        confirm_password = request.data.get('confirm_password')
-        erp_id = request.data.get('erp_id')
+        try:
+            refresh_token = request.data.get('refresh_token')
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            logger.info(f"User {request.user.email} logged out")
+            return Response({'message': 'Successfully logged out'})
+        except Exception as e:
+            logger.error(f"Logout failed: {str(e)}")
+            return Response({'error': str(e)}, status=400)
 
-        if not all([email, password, confirm_password, erp_id]):
-            return Response({'error': 'All fields (email, password, confirm_password, erp_id) are required'}, status=400)
-        if password != confirm_password:
-            return Response({'error': 'Passwords do not match'}, status=400)
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
 
-        if erp_id == 'education':
-            if EducationUser.objects.filter(email=email).exists():
-                return Response({'error': 'Email already registered in Education ERP'}, status=400)
-            user = EducationUser(email=email)
-            user.set_password(password)
-            user.save()
-        elif erp_id == 'small-business':
-            if BusinessUser.objects.filter(email=email).exists():
-                return Response({'error': 'Email already registered in Small Business ERP'}, status=400)
-            user = BusinessUser(email=email)
-            user.set_password(password)
-            user.save()
-        else:
-            return Response({'error': 'Invalid ERP ID'}, status=400)
-
-        wrapped_user = ERPUserWrapper(user, erp_id)
-        token = ERPAuthTokenSerializer.get_token(wrapped_user)  # Pass wrapped user with erp_id
-        return Response({
-            'refresh': str(token),
-            'access': str(token.access_token),
-            'message': 'Registration successful',
-            'erp_id': erp_id,
-        }, status=201)
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        logger.info(f"User profile accessed for {request.user.email}")
+        return Response(serializer.data)

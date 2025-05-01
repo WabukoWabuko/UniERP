@@ -1,10 +1,7 @@
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import serializers
+from education_erp.models import EducationUser
 
-class ERPAuthTokenSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        # Expect user to be an ERPUserWrapper instance
-        token = RefreshToken.for_user(user)
-        token['erp_id'] = user._erp_id  # Use the erp_id from the wrapped user
-        return token
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EducationUser
+        fields = ['id', 'email', 'erp_role', 'permissions']

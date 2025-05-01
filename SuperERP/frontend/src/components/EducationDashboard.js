@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './Navbar';
@@ -10,22 +10,32 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const EducationDashboard = () => {
   const [data, setData] = useState({});
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const response = await axios.get('http://127.0.0.1:8000/api/education/dashboard/', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
-        setData(response.data);
-      } catch (err) {
-        localStorage.removeItem('token');
-        navigate('/');
+  const fetchDashboard = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Token:', token);
+      if (!token) {
+        throw new Error('No token found in localStorage');
       }
-    };
-    fetchDashboard();
+      const response = await axios.get('http://127.0.0.1:8000/api/dashboard/education/', {  // Fixed URL
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setData(response.data);
+      setError('');
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to load dashboard');
+      console.log('Error Response:', err.response || err);
+      localStorage.removeItem('token');
+      navigate('/');
+    }
   }, [navigate]);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
 
   const chartData = {
     labels: ['Students', 'Staff', 'Fees Due', 'Attendance Today'],
@@ -44,15 +54,16 @@ const EducationDashboard = () => {
           <div className="col-md-10">
             <div className="card shadow p-4">
               <h1 className="display-4 text-primary mb-4">Education ERP Dashboard</h1>
+              {error && <p className="text-danger">{error}</p>}
               <div className="row mb-4">
                 <div className="col-md-6">
                   <Bar data={chartData} options={{ responsive: true, scales: { y: { beginAtZero: true } } }} />
                 </div>
                 <div className="col-md-6">
-                  <p>Total Students: {data.total_students}</p>
-                  <p>Total Staff: {data.total_staff}</p>
-                  <p>Total Fees Due: ${data.total_fees_due?.toFixed(2)}</p>
-                  <p>Attendance Today: {data.attendance_today}</p>
+                  <p>Total Students: {data.total_students || 0}</p>
+                  <p>Total Staff: {data.total_staff || 0}</p>
+                  <p>Total Fees Due: ${(data.total_fees_due || 0).toFixed(2)}</p>
+                  <p>Attendance Today: {data.attendance_today || 0}</p>
                 </div>
               </div>
               <div className="row mt-5">

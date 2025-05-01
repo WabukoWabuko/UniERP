@@ -1,57 +1,42 @@
 from django.db import models
-from django.contrib.auth.hashers import make_password, check_password
-import datetime
+from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 
-class EducationUser(models.Model):
-    ROLES = (('admin', 'Admin'), ('teacher', 'Teacher'), ('staff', 'Staff'))
-    email = models.EmailField(unique=True)
-    password = models.CharField(max_length=128)
-    erp_role = models.CharField(max_length=50, choices=ROLES, default='staff')
+class EducationUser(AbstractUser):
+    erp_role = models.CharField(max_length=50, choices=[('admin', 'Admin'), ('teacher', 'Teacher'), ('student', 'Student')])
+    permissions = models.JSONField(default=dict)  # Custom permissions e.g., {"view_students": true, "edit_fees": false}
 
-    def set_password(self, raw_password):
-        self.password = make_password(raw_password)
-        self.save()
-
-    def check_password(self, raw_password):
-        return check_password(raw_password, self.password)
+    def __str__(self):
+        return self.email
 
 class Student(models.Model):
-    user = models.ForeignKey(EducationUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(EducationUser, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
-    student_id = models.CharField(max_length=20, unique=True)
-    grade = models.CharField(max_length=10)  # Stays as grade (e.g., "10A")
-    enrollment_date = models.DateField(auto_now_add=True)
-    date_of_birth = models.DateField(null=True, blank=True)
+    enrollment_date = models.DateField(default=timezone.now)
+
+    def __str__(self):
+        return self.name
 
 class Staff(models.Model):
-    user = models.ForeignKey(EducationUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(EducationUser, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
-    staff_id = models.CharField(max_length=20, unique=True)
+    staff_id = models.CharField(max_length=10, unique=True)
     role = models.CharField(max_length=50)
-    hire_date = models.DateField(auto_now_add=True)
-    salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
+    hire_date = models.DateField(default=timezone.now)
+    salary = models.DecimalField(max_digits=10, decimal_places=2)
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=12.0)
     leave_balance = models.IntegerField(default=20)
 
+    def __str__(self):
+        return self.name
+
 class Attendance(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    date = models.DateField(default=datetime.date.today)
-    present = models.BooleanField(default=False)
-
-class Grade(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='grades')  # Fix: Added related_name
-    subject = models.CharField(max_length=100)
-    grade_value = models.DecimalField(max_digits=5, decimal_places=2)
-    date_recorded = models.DateField(auto_now_add=True)
-
-class Timetable(models.Model):
     user = models.ForeignKey(EducationUser, on_delete=models.CASCADE)
-    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    subject = models.CharField(max_length=100)
-    day_of_week = models.CharField(max_length=10)
-    start_time = models.TimeField()
-    end_time = models.TimeField()
+    date = models.DateField(default=timezone.now)
+    present = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.date}"
 
 class Fee(models.Model):
     user = models.ForeignKey(EducationUser, on_delete=models.CASCADE)
@@ -60,3 +45,34 @@ class Fee(models.Model):
     due_date = models.DateField()
     paid = models.BooleanField(default=False)
     paid_date = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.student.name} - ${self.amount}"
+
+class Course(models.Model):
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20, unique=True)
+    teacher = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
+    students = models.ManyToManyField(Student)
+
+    def __str__(self):
+        return self.name
+
+class Assignment(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    title = models.CharField(max_length=100)
+    description = models.TextField()
+    due_date = models.DateTimeField()
+    max_score = models.IntegerField()
+
+    def __str__(self):
+        return self.title
+
+class Grade(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE)
+    score = models.IntegerField()
+    submitted_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.student.name} - {self.assignment.title}"

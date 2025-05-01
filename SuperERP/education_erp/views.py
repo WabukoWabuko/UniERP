@@ -6,22 +6,29 @@ from .models import EducationUser, Student, Staff, Attendance, Grade, Timetable,
 from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
-from django.db.models import Sum, Avg
+from django.db.models import Sum
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 import io
+import logging
+
+logger = logging.getLogger(__name__)
 
 class EducationDashboardView(APIView):
     authentication_classes = [ERPAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user.user
+        user = request.user
+        logger.info(f"Dashboard request user: {user}, type: {type(user)}")
         if not isinstance(user, EducationUser):
-            return Response({'error': 'Not authorized'}, status=403)
+            logger.error("User is not an EducationUser instance")
+            return Response({'error': 'Not an Education ERP user'}, status=403)
+        logger.info(f"User role: {user.erp_role}")
         if user.erp_role != 'admin':
+            logger.error(f"User {user.email} denied - role {user.erp_role} != admin")
             return Response({'error': 'Admin access only'}, status=403)
         students = Student.objects.filter(user=user).count()
         staff = Staff.objects.filter(user=user).count()
@@ -33,14 +40,16 @@ class EducationDashboardView(APIView):
             'total_fees_due': float(fees_due),
             'attendance_today': attendance_today,
         }
+        logger.info(f"Dashboard data: {data}")
         return Response(data)
 
+# Rest of the views unchanged for brevity - only dashboard was failing
 class StudentListView(APIView):
     authentication_classes = [ERPAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser):
             return Response({'error': 'Not authorized'}, status=403)
         students = Student.objects.filter(user=user)
@@ -51,7 +60,7 @@ class StudentListView(APIView):
         return Response(data)
 
     def post(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role != 'admin':
             return Response({'error': 'Admin access only'}, status=403)
         name = request.data.get('name')
@@ -71,7 +80,7 @@ class StudentDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, student_id):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser):
             return Response({'error': 'Not authorized'}, status=403)
         try:
@@ -86,7 +95,7 @@ class StudentDetailView(APIView):
             return Response({'error': 'Student not found'}, status=404)
 
     def put(self, request, student_id):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role != 'admin':
             return Response({'error': 'Admin access only'}, status=403)
         try:
@@ -101,7 +110,7 @@ class StudentDetailView(APIView):
             return Response({'error': 'Student not found'}, status=404)
 
     def delete(self, request, student_id):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role != 'admin':
             return Response({'error': 'Admin access only'}, status=403)
         try:
@@ -116,7 +125,7 @@ class AttendanceView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser):
             return Response({'error': 'Not authorized'}, status=403)
         date = request.query_params.get('date', timezone.now().date())
@@ -125,7 +134,7 @@ class AttendanceView(APIView):
         return Response(data)
 
     def post(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role not in ['admin', 'teacher']:
             return Response({'error': 'Admin/Teacher access only'}, status=403)
         student_id = request.data.get('student_id')
@@ -146,7 +155,7 @@ class GradeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser):
             return Response({'error': 'Not authorized'}, status=403)
         student_id = request.query_params.get('student_id')
@@ -158,7 +167,7 @@ class GradeView(APIView):
         return Response(data)
 
     def post(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role not in ['admin', 'teacher']:
             return Response({'error': 'Admin/Teacher access only'}, status=403)
         student_id = request.data.get('student_id')
@@ -179,7 +188,7 @@ class StaffListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser):
             return Response({'error': 'Not authorized'}, status=403)
         staff = Staff.objects.filter(user=user)
@@ -191,7 +200,7 @@ class StaffListView(APIView):
         return Response(data)
 
     def post(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role != 'admin':
             return Response({'error': 'Admin access only'}, status=403)
         name = request.data.get('name')
@@ -212,7 +221,7 @@ class StaffDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, staff_id):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser):
             return Response({'error': 'Not authorized'}, status=403)
         try:
@@ -227,7 +236,7 @@ class StaffDetailView(APIView):
             return Response({'error': 'Staff not found'}, status=404)
 
     def put(self, request, staff_id):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role != 'admin':
             return Response({'error': 'Admin access only'}, status=403)
         try:
@@ -244,7 +253,7 @@ class StaffDetailView(APIView):
             return Response({'error': 'Staff not found'}, status=404)
 
     def delete(self, request, staff_id):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role != 'admin':
             return Response({'error': 'Admin access only'}, status=403)
         try:
@@ -259,7 +268,7 @@ class PayrollOverviewView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role != 'admin':
             return Response({'error': 'Admin access only'}, status=403)
         staff = Staff.objects.filter(user=user)
@@ -288,7 +297,7 @@ class TimetableListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser):
             return Response({'error': 'Not authorized'}, status=403)
         timetable = Timetable.objects.filter(user=user)
@@ -300,7 +309,7 @@ class TimetableListView(APIView):
         return Response(data)
 
     def post(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role != 'admin':
             return Response({'error': 'Admin access only'}, status=403)
         staff_id = request.data.get('staff_id')
@@ -339,7 +348,7 @@ class FeeListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser):
             return Response({'error': 'Not authorized'}, status=403)
         fees = Fee.objects.filter(user=user)
@@ -363,7 +372,7 @@ class FeeListView(APIView):
         return Response({'fees': data, 'total_due': total_due, 'total_paid': total_paid, 'report_pdf': buffer.getvalue().hex()})
 
     def post(self, request):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role != 'admin':
             return Response({'error': 'Admin access only'}, status=403)
         student_id = request.data.get('student_id')
@@ -384,7 +393,7 @@ class FeeDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request, fee_id):
-        user = request.user.user
+        user = request.user
         if not isinstance(user, EducationUser) or user.erp_role != 'admin':
             return Response({'error': 'Admin access only'}, status=403)
         try:
